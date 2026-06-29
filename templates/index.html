@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crop Disease Detection - Real-time AI</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+        }
+
+        /* Header */
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            font-size: 2.5rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: #10b981;
+            color: white;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .status.loading {
+            background: #f59e0b;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Main Content */
+        main {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 2rem;
+            height: 100%;
+        }
+
+        /* Video Section */
+        .video-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .video-container {
+            position: relative;
+            flex: 1;
+            background: #000;
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 500px;
+            border: 3px solid #667eea;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+        }
+
+        #video, #canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 17px;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .video-placeholder {
+            text-align: center;
+            color: #888;
+        }
+
+        .video-placeholder-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            flex: 1;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Results Section */
+        .results-section {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            max-height: 800px;
+        }
+
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .results-header h2 {
+            font-size: 1.5rem;
+            color: #111827;
+        }
+
+        .detection-count {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+
+        .results-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .detection-card {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+            transition: transform 0.2s;
+        }
+
+        .detection-card:hover {
+            transform: translateX(5px);
+        }
+
+        .detection-card.healthy {
+            border-color: #10b981;
+        }
+
+        .detection-card.diseased {
+            border-color: #ef4444;
+        }
+
+        .detection-card.non-leaf {
+            border-color: #6b7280;
+        }
+
+        .detection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .detection-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .detection-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .badge-healthy {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-diseased {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-non-leaf {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .detection-details {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+
+        .detail-label {
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            color: #111827;
+            font-weight: 600;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+        }
+
+        .no-detections {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #9ca3af;
+        }
+
+        .no-detections-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 2px solid #e5e7eb;
+        }
+
+        .stat-card {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+
+        /* Upload Section */
+        .upload-section {
+            text-align: center;
+            padding: 1.5rem;
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .upload-section:hover {
+            border-color: #667eea;
+            background: #f9fafb;
+        }
+
+        .upload-icon {
+            font-size: 2rem;
+            color: #9ca3af;
+            margin-bottom: 0.5rem;
+        }
+
+        #imageInput {
+            display: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .results-section {
+                max-height: none;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🌿</span>
+                <div>
+                    <h1>Crop Disease Detection</h1>
+                    <p style="font-size: 0.9rem; color: #6b7280; margin-top: 0.25rem;">
+                        AI-Powered Real-time Detection
+                    </p>
+                </div>
+            </div>
+            <div class="status" id="status">
+                <span class="status-dot"></span>
+                <span>Models Ready</span>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <!-- Video Section -->
+            <div class="video-section">
+                <div class="video-container" id="videoContainer">
+                    <video id="video" autoplay playsinline style="display: none;"></video>
+                    <canvas id="canvas" style="display: none;"></canvas>
+                    <div class="video-placeholder" id="placeholder">
+                        <div class="video-placeholder-icon">📷</div>
+                        <h3>Start Your Camera</h3>
+                        <p>Click the button below to begin detection</p>
+                    </div>
+                </div>
+
+                <div class="upload-section" onclick="document.getElementById('imageInput').click()">
+                    <div class="upload-icon">📁</div>
+                    <p><strong>Upload Image</strong></p>
+                    <p style="font-size: 0.85rem; color: #6b7280; margin-top: 0.5rem;">
+                        Or drag and drop here
+                    </p>
+                    <input type="file" id="imageInput" accept="image/*">
+                </div>
+
+                <div class="controls">
+                    <button class="btn-primary" id="startBtn">
+                        <span>📹</span>
+                        Start Camera
+                    </button>
+                    <button class="btn-danger" id="stopBtn" style="display: none;">
+                        <span>⏹</span>
+                        Stop Camera
+                    </button>
+                    <button class="btn-secondary" id="captureBtn" style="display: none;">
+                        <span>📸</span>
+                        Capture
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section">
+                <div class="results-header">
+                    <h2>Detection Results</h2>
+                    <div class="detection-count" id="detectionCount">
+                        0 Detected
+                    </div>
+                </div>
+
+                <div class="results-content" id="resultsContent">
+                    <div class="no-detections">
+                        <div class="no-detections-icon">🔍</div>
+                        <p><strong>No detections yet</strong></p>
+                        <p style="font-size: 0.9rem; margin-top: 0.5rem;">
+                            Start camera or upload an image to begin
+                        </p>
+                    </div>
+                </div>
+
+                <div class="stats" id="stats" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="healthyCount">0</div>
+                        <div class="stat-label">Healthy</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="diseasedCount">0</div>
+                        <div class="stat-label">Diseased</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    // Elements
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const captureBtn = document.getElementById('captureBtn');
+    const placeholder = document.getElementById('placeholder');
+    const resultsContent = document.getElementById('resultsContent');
+    const detectionCount = document.getElementById('detectionCount');
+    const stats = document.getElementById('stats');
+    const imageInput = document.getElementById('imageInput');
+
+    let stream = null;
+    let isDetecting = false;
+    let isProcessing = false;  // Prevent concurrent requests
+    let lastDetections = [];
+    let animationId = null;
+
+    // Configuration
+    const DETECTION_INTERVAL = 1000;  // Process every 1 second (adjustable)
+    const VIDEO_QUALITY = 0.6;  // JPEG quality (0.5-0.8 recommended)
+    const RESIZE_WIDTH = 640;   // Resize frame before sending
+
+    // Start Camera
+    startBtn.addEventListener('click', async () => {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: 'environment'
+                } 
+            });
+            
+            video.srcObject = stream;
+            video.style.display = 'block';
+            canvas.style.display = 'block';
+            placeholder.style.display = 'none';
+            
+            video.onloadedmetadata = () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                isDetecting = true;
+                
+                // Start two loops: one for display, one for detection
+                renderLoop();
+                detectLoop();
+            };
+
+            startBtn.style.display = 'none';
+            stopBtn.style.display = 'flex';
+            captureBtn.style.display = 'flex';
+        } catch (error) {
+            alert('Error accessing camera: ' + error.message);
+        }
+    });
+
+    // Stop Camera
+    stopBtn.addEventListener('click', () => {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            video.srcObject = null;
+            isDetecting = false;
+            cancelAnimationFrame(animationId);
+            
+            video.style.display = 'none';
+            canvas.style.display = 'none';
+            placeholder.style.display = 'block';
+            
+            startBtn.style.display = 'flex';
+            stopBtn.style.display = 'none';
+            captureBtn.style.display = 'none';
+        }
+    });
+
+    // Render Loop - Runs at 60 FPS for smooth video
+    function renderLoop() {
+        if (!isDetecting) return;
+        
+        // Draw video frame
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Draw bounding boxes from last detection
+        drawBoundingBoxes(lastDetections);
+        
+        animationId = requestAnimationFrame(renderLoop);
+    }
+
+    // Detection Loop - Runs every N seconds
+    let lastDetectionTime = 0;
+    async function detectLoop() {
+        if (!isDetecting) return;
+
+        const now = Date.now();
+        
+        // Only process if enough time has passed and not currently processing
+        if (now - lastDetectionTime >= DETECTION_INTERVAL && !isProcessing) {
+            lastDetectionTime = now;
+            await processFrame();
+        }
+
+        // Continue loop
+        setTimeout(detectLoop, 100);
+    }
+
+    // Process Frame - Send to backend
+    async function processFrame() {
+        isProcessing = true;
+
+        try {
+            // Create temporary canvas for resizing
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Calculate resize dimensions
+            const scale = RESIZE_WIDTH / video.videoWidth;
+            tempCanvas.width = RESIZE_WIDTH;
+            tempCanvas.height = video.videoHeight * scale;
+            
+            // Draw resized frame
+            tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // Convert to base64 with compression
+            const imageData = tempCanvas.toDataURL('image/jpeg', VIDEO_QUALITY);
+            
+            const response = await fetch('/api/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image: imageData })
+            });
+
+            const data = await response.json();
+            
+            if (data.success) {
+                // Scale detections back to original size
+                lastDetections = scaleDetections(data.detections, scale);
+                displayResults(lastDetections);
+            }
+        } catch (error) {
+            console.error('Detection error:', error);
+        } finally {
+            isProcessing = false;
+        }
+    }
+
+    // Scale detections back to original resolution
+    function scaleDetections(detections, scale) {
+        return detections.map(det => ({
+            ...det,
+            bbox: det.bbox.map(coord => coord / scale)
+        }));
+    }
+
+    // Draw bounding boxes on canvas
+    function drawBoundingBoxes(detections) {
+        detections.forEach((det, index) => {
+            const [x1, y1, x2, y2] = det.bbox;
+            
+            // Determine color based on detection type
+            let color;
+            let borderColor;
+            if (det.type === 'leaf') {
+                color = det.is_healthy ? '#10b981' : '#ef4444';
+                borderColor = det.is_healthy ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+            } else {
+                color = '#6b7280';
+                borderColor = 'rgba(107, 114, 128, 0.3)';
+            }
+            
+            // Draw semi-transparent background for box
+            ctx.fillStyle = borderColor;
+            ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+            
+            // Draw border box with thicker line
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+            
+            // Add corner indicators
+            const cornerSize = 15;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            // Top-left
+            ctx.strokeRect(x1, y1, cornerSize, cornerSize);
+            // Top-right
+            ctx.strokeRect(x2 - cornerSize, y1, cornerSize, cornerSize);
+            // Bottom-left
+            ctx.strokeRect(x1, y2 - cornerSize, cornerSize, cornerSize);
+            // Bottom-right
+            ctx.strokeRect(x2 - cornerSize, y2 - cornerSize, cornerSize, cornerSize);
+            
+            // Draw label background
+            let label = '';
+            if (det.type === 'leaf') {
+                label = `${det.species.toUpperCase()}: ${det.disease}`;
+            } else {
+                label = 'Non-Leaf';
+            }
+            
+            ctx.font = 'bold 18px Arial';
+            const textMetrics = ctx.measureText(label);
+            const textWidth = textMetrics.width + 20;
+            const textHeight = 35;
+            
+            // Label background
+            ctx.fillStyle = color;
+            ctx.fillRect(x1, y1 - textHeight, textWidth, textHeight);
+            
+            // Label text
+            ctx.fillStyle = 'white';
+            ctx.textAlign = 'left';
+            ctx.fillText(label, x1 + 10, y1 - 10);
+            
+            // Draw confidence on the right side
+            if (det.type === 'leaf') {
+                const conf = `${(det.disease_confidence * 100).toFixed(0)}%`;
+                ctx.font = 'bold 16px Arial';
+                const confWidth = ctx.measureText(conf).width + 15;
+                
+                ctx.fillStyle = color;
+                ctx.fillRect(x2 - confWidth, y2, confWidth, 30);
+                
+                ctx.fillStyle = 'white';
+                ctx.fillText(conf, x2 - confWidth + 8, y2 + 22);
+            }
+        });
+    }
+
+    // Capture Button
+    captureBtn.addEventListener('click', () => {
+        // Force immediate detection
+        lastDetectionTime = 0;
+        processFrame();
+    });
+
+    // Upload Image
+    imageInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const imageData = event.target.result;
+
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image: imageData })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayResults(data.detections);
+                    
+                    // Show uploaded image on canvas with bounding boxes
+                    const img = new Image();
+                    img.onload = () => {
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        ctx.drawImage(img, 0, 0);
+                        
+                        // Draw bounding boxes on the uploaded image
+                        if (data.detections && data.detections.length > 0) {
+                            drawBoundingBoxes(data.detections);
+                        }
+                        
+                        canvas.style.display = 'block';
+                        placeholder.style.display = 'none';
+                    };
+                    img.src = imageData;  // Show the original uploaded image
+                }
+            } catch (error) {
+                alert('Error processing image: ' + error.message);
+            }
+        };
+        reader.readAsDataURL(file);
+    });
+
+    // Display Results (same as before)
+    function displayResults(detections) {
+        detectionCount.textContent = `${detections.length} Detected`;
+
+        if (detections.length === 0) {
+            resultsContent.innerHTML = `
+                <div class="no-detections">
+                    <div class="no-detections-icon">🔍</div>
+                    <p><strong>No objects detected</strong></p>
+                </div>
+            `;
+            stats.style.display = 'none';
+            return;
+        }
+
+        let healthyCount = 0;
+        let diseasedCount = 0;
+
+        let html = '';
+        detections.forEach((det, idx) => {
+            if (det.type === 'leaf') {
+                const isHealthy = det.is_healthy;
+                if (isHealthy) healthyCount++;
+                else diseasedCount++;
+
+                html += `
+                    <div class="detection-card ${isHealthy ? 'healthy' : 'diseased'}">
+                        <div class="detection-header">
+                            <div class="detection-title">
+                                🌿 ${det.species.toUpperCase()}
+                            </div>
+                            <span class="detection-badge ${isHealthy ? 'badge-healthy' : 'badge-diseased'}">
+                                ${isHealthy ? '✓ Healthy' : '⚠ Diseased'}
+                            </span>
+                        </div>
+                        <div class="detection-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Disease:</span>
+                                <span class="detail-value">${det.disease}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">Confidence:</span>
+                                <span class="detail-value">${(det.disease_confidence * 100).toFixed(1)}%</span>
+                            </div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: ${det.disease_confidence * 100}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="detection-card non-leaf">
+                        <div class="detection-header">
+                            <div class="detection-title">❌ Non-Leaf Object</div>
+                            <span class="detection-badge badge-non-leaf">Ignored</span>
+                        </div>
+                        <div class="detection-details">
+                            <div class="detail-row">
+                                <span class="detail-label">Confidence:</span>
+                                <span class="detail-value">${(det.confidence * 100).toFixed(1)}%</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        resultsContent.innerHTML = html;
+
+        document.getElementById('healthyCount').textContent = healthyCount;
+        document.getElementById('diseasedCount').textContent = diseasedCount;
+        stats.style.display = 'grid';
+    }
+
+    // Drag and drop
+    const uploadSection = document.querySelector('.upload-section');
+    
+    uploadSection.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadSection.style.borderColor = '#667eea';
+        uploadSection.style.background = '#f9fafb';
+    });
+
+    uploadSection.addEventListener('dragleave', () => {
+        uploadSection.style.borderColor = '#d1d5db';
+        uploadSection.style.background = '';
+    });
+
+    uploadSection.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadSection.style.borderColor = '#d1d5db';
+        uploadSection.style.background = '';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            imageInput.files = files;
+            imageInput.dispatchEvent(new Event('change'));
+        }
+    });
+</script>
+</body>
+</html>
